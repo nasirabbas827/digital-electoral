@@ -9,25 +9,11 @@ if (!isset($_SESSION["usertype"]) || $_SESSION["usertype"] !== "admin") {
 }
 
 // Initialize variables
-$voter_id = $voter_password = $user_id = "";
-$voter_id_err = $voter_password_err = $user_id_err = "";
+$user_id = "";
+$user_id_err = "";
 
 // Processing form data when form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    // Validate voter ID
-    if (empty(trim($_POST["voter_id"]))) {
-        $voter_id_err = "Please enter the voter ID.";
-    } else {
-        $voter_id = trim($_POST["voter_id"]);
-    }
-
-    // Validate voter password
-    if (empty(trim($_POST["voter_password"]))) {
-        $voter_password_err = "Please enter the voter password.";
-    } else {
-        $voter_password = trim($_POST["voter_password"]);
-    }
 
     // Validate user ID
     if (empty(trim($_POST["user_id"]))) {
@@ -37,7 +23,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Check for errors before inserting into database
-    if (empty($voter_id_err) && empty($voter_password_err) && empty($user_id_err)) {
+    if (empty($user_id_err)) {
+        // Generate random voter ID and password
+        $voter_id = bin2hex(random_bytes(4));
+        $voter_password = bin2hex(random_bytes(6));
 
         // Prepare an insert statement
         $sql = "INSERT INTO voter_table (Voter_ID, Voter_Password, Registered_Date, Approval_Status, user_ID) VALUES (?, ?, NOW(), 'Approved', ?)";
@@ -86,22 +75,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <h2 class="text-center">Assign Voter ID and Password</h2>
     <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
         <div class="form-group">
-            <label for="voter_id">Voter ID:</label>
-            <input type="text" name="voter_id" class="form-control <?php echo (!empty($voter_id_err)) ? 'is-invalid' : ''; ?>" value="<?php echo $voter_id; ?>">
-            <span class="invalid-feedback"><?php echo $voter_id_err; ?></span>
-        </div>
-        <div class="form-group">
-            <label for="voter_password">Voter Password:</label>
-            <input type="password" name="voter_password" class="form-control <?php echo (!empty($voter_password_err)) ? 'is-invalid' : ''; ?>" value="<?php echo $voter_password; ?>">
-            <span class="invalid-feedback"><?php echo $voter_password_err; ?></span>
-        </div>
-        <div class="form-group">
             <label for="user_id">Select User:</label>
-            <select name="user_id" class="form-control <?php echo (!empty($user_id_err)) ? 'is-invalid' : ''; ?>">
+            <select name="user_id" class="form-control <?php echo (!empty($user_id_err)) ? 'is-invalid' : ''; ?>" required>
                 <option value="" selected disabled>Select User</option>
                 <?php
-                // Fetch users from the database
-                $sql = "SELECT id, name FROM users";
+                // Fetch users who do not have an assigned voter ID and password from the database
+                $sql = "SELECT u.id, u.name FROM users u LEFT JOIN voter_table v ON u.id = v.user_ID WHERE v.user_ID IS NULL";
                 $result = mysqli_query($conn, $sql);
                 if (mysqli_num_rows($result) > 0) {
                     while ($row = mysqli_fetch_assoc($result)) {
@@ -113,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <span class="invalid-feedback"><?php echo $user_id_err; ?></span>
         </div>
         <div class="form-group text-center">
-            <input type="submit" class="btn btn-primary" value="Assign">
+            <button type="button" id="generateBtn" class="btn btn-primary">Generate Voter ID and Password</button>
             <a class="btn btn-outline-dark" href="view_voters.php">View Voters</a>
         </div>
     </form>
@@ -122,5 +101,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#generateBtn').click(function() {
+        $('form').submit();
+    });
+});
+</script>
 </body>
 </html>
